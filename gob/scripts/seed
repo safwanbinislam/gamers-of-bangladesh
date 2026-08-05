@@ -1,0 +1,192 @@
+import { createClient } from "@supabase/supabase-js";
+
+const URL = "https://dearprguaymmvgqqqbjf.supabase.co";
+const SERVICE_ROLE = "sb_secret_pk8cU8CkfsEux0w8RI0p8Q_7F0xiuYN";
+
+const supabase = createClient(URL, SERVICE_ROLE, {
+  auth: { autoRefreshToken: false, persistSession: false },
+});
+
+function base64url(input) {
+  return Buffer.from(input).toString("base64url");
+}
+
+async function createUser(email, password, username) {
+  const { data: user, error } = await supabase.auth.admin.createUser({
+    email,
+    password,
+    email_confirm: true,
+    user_metadata: { username },
+  });
+  if (error) throw new Error(`createUser ${email}: ${error.message}`);
+  const { error: profileError } = await supabase.from("profiles").upsert({
+    id: user.user.id,
+    username,
+  });
+  if (profileError) throw new Error(`upsert profile ${username}: ${profileError.message}`);
+  return user.user.id;
+}
+
+async function main() {
+  console.log("=== CLEANUP previous test data ===");
+  await supabase.from("reviews").delete().eq("reviewer_id", "00000000-0000-0000-0000-000000000000");
+  // Delete existing passport test users if any
+  const { data: existing } = await supabase.from("profiles").select("id, username");
+  for (const p of existing || []) {
+    if (p.username === "passport_owner" || p.username === "passport_viewer") {
+      await supabase.from("reviews").delete().eq("reviewee_id", p.id);
+      await supabase.from("escrow_transactions").delete().eq("seller_id", p.id);
+      await supabase.from("escrow_transactions").delete().eq("buyer_id", p.id);
+      await supabase.from("tournament_registrations").delete().eq("player_id", p.id);
+      await supabase.from("tournament_matches").delete().eq("reported_by", p.id);
+      await supabase.from("tournament_prize_payouts").delete().eq("player_id", p.id);
+      await supabase.from("player_game_stats").delete().eq("player_id", p.id);
+      await supabase.from("profiles").delete().eq("id", p.id);
+      await supabase.auth.admin.deleteUser(p.id);
+      console.log("Cleaned old user:", p.username);
+    }
+  }
+
+  console.log("\n=== CREATE USERS ===");
+  const ownerId = await createUser("passport.owner@test.com", "test123456", "passport_owner");
+  const viewerId = await createUser("passport.viewer@test.com", "test123456", "passport_viewer");
+  console.log("Owner:", ownerId);
+  console.log("Viewer:", viewerId);
+
+  console.log("\n=== SEED PROFILE ===");
+  const { error: profErr } = await supabase.from("profiles").update({ phone_verified: true }).eq("id", ownerId);
+  if (profErr) throw profErr;
+
+  console.log("\n=== SEED 10 COMPLETED TRADES + REVIEWS ===");
+  const { data: buyerData } = await supabase.from("profiles").select("id").eq("username", "safu123").single();
+  const buyerId = buyerData.id;
+
+  let totalRev = 0;
+  const reviewCount = 10;
+  for (let i = 0; i < reviewCount; i++) {
+    // create a listing
+    const { data: listing } = await supabase
+      .from("listings")
+      .insert({
+        seller_id: ownerId,
+        game: "free_fire",
+        item_type: "account",
+        title: `Passport Trade ${i}`,
+        price_bdt: 1000 + i * 100,
+        status: "sold",
+      })
+      .select("id")
+      .single();
+
+    // create an escrow transaction (completed)
+    const { data: tx } = await supabase
+      .from("escrow_transactions")
+      .insert({
+        listing_id: listing.id,
+        buyer_id: buyerId,
+        seller_id: ownerId,
+        amount_bdt: 1000 + i * 100,
+        platform_fee_bdt: Math.round((1000 + i * 100) * 0.1),
+        status: "released",
+      })
+      .select("id")
+      .single();
+
+    // review rating 5 (stars) — 5 stars each = reputation 5.0
+    await supabase.from("reviews").insert({
+      transaction_id: tx.id,
+      reviewer_id: buyerId,
+      reviewee_id: ownerId,
+      rating: 5,
+      comment: `Great trade ${i}`,
+    });
+    totalRev += 5;
+  }
+  const reputation = totalRev / reviewCount;
+  const { error: tradeErr } = await supabase
+    .from("profiles")
+    .update({ total_trades: reviewCount, reputation_score: reputation })
+    .eq("id", ownerId);
+  if (tradeErr) throw tradeErr;
+  console.log(`Seeded ${reviewCount} completed trades, reputation=${reputation}`);
+
+  console.log("\n=== SEED TOURNAMENT + WIN ===");
+  const { data: tournament } = await supabase
+    .from("tournaments")
+    .insert({
+      organizer_id: ownerId,
+      game: "free_fire",
+      title: "Passport Champ Cup",
+      rules: "test",
+      entry_fee_bdt: 0,
+      platform_fee_percent: 0,
+      max_participants: 2,
+      prize_split: { "1st": 100 },
+      status: "completed",
+      starts_at: new Date(Date.now() - 86400000 * 7).toISOString(),
+    })
+    .select("id")
+    .single();
+
+  await supabase.from("tournament_registrations").insert({
+    tournament_id: tournament.id,
+    player_id: ownerId,
+    payment_method: "bkash",
+    payment_status: "paid",
+  });
+
+  // winner match
+  const { data: match } = await supabase
+    .from("tournament_matches")
+    .insert({
+      tournament_id: tournament.id,
+      round_number: 1,
+      match_number: 1,
+      player1_id: ownerId,
+      player2_id: buyerId,
+      winner_id: ownerId,
+      is_bye: false,
+      status: "reported",
+    })
+    .select("id")
+    .single();
+  void match;
+
+  await supabase.from("tournament_prize_payouts").insert({
+    tournament_id: tournament.id,
+    player_id: ownerId,
+    placement: 1,
+    amount_bdt: 500,
+    payout_status: "paid",
+  });
+
+  console.log("Tournament seeded: tournaments_played=1, won=1, best_placement=1, matches_won=1/1");
+
+  console.log("\n=== GENERATE SESSION COOKIES ===");
+  // Sign in both users to get real session tokens (respects actual auth)
+  for (const [label, email, pw] of [
+    ["OWNER", "passport.owner@test.com", "test123456"],
+    ["VIEWER", "passport.viewer@test.com", "test123456"],
+  ]) {
+    const { data: sessionData, error: signInErr } = await supabase.auth.signInWithPassword({
+      email,
+      password: pw,
+    });
+    if (signInErr) throw new Error(`signIn ${email}: ${signInErr.message}`);
+    const { access_token, refresh_token, token_type, expires_at } = sessionData.session;
+    // supabase-ssr default cookie name: sb-<ref>-auth-token, value = base64url([at, rt, tt, exp])
+    const cookieValue = base64url(
+      JSON.stringify([access_token, refresh_token, token_type, expires_at])
+    );
+    console.log(`${label}_COOKIE=sb-dearprguaymmvgqqqbjf-auth-token=${cookieValue}`);
+  }
+
+  console.log("\nOWNER_ID=" + ownerId);
+  console.log("VIEWER_ID=" + viewerId);
+  console.log("\n=== DONE ===");
+}
+
+main().catch((e) => {
+  console.error("FATAL:", e);
+  process.exit(1);
+});

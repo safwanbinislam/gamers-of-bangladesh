@@ -1,0 +1,25 @@
+import { createClient } from "@supabase/supabase-js";
+import type { Database } from "./types";
+
+/**
+ * Server-side Supabase client using the service role key.
+ * Bypasses RLS — used ONLY for admin actions (dispute resolution, etc.).
+ * Must NEVER be imported into any client component or exposed to the browser.
+ */
+export function createAdminSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error(
+      "Missing SUPABASE_SERVICE_ROLE_KEY or NEXT_PUBLIC_SUPABASE_URL environment variables"
+    );
+  }
+
+  return createClient<Database>(supabaseUrl, serviceRoleKey, {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false,
+    },
+  });
+}
