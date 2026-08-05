@@ -170,8 +170,8 @@ Frontend:
    high-severity findings with **no safe fix available** (flags a "breaking"
    or impossible direct update). Requires package upgrades + full regression
    testing before being applied.
-3. **No git filter for `.env`** — `.gitignore` exists in `gob/`. Confirm
-   `.env.local` is ignored before any remote push.
+3. **`.env` files are git-ignored** — `.gitignore` covers `.env.local`,
+   `.env*.local`, and `.env`. No secrets are tracked.
 
 ## 8. Unfinished Work / Next Steps
 
