@@ -77,9 +77,11 @@ squad matchmaking, and tournaments.
   - **Newly added:** squad request INSERTs
     (`squad_sessions` where the current user is the recipient)
 
-## 5. Recent Work (Squad Finder session lifecycle)
+## 5. Recent Work
 
-### 5.1 Database (migrations applied to production)
+### 5.1 Squad Finder session lifecycle
+
+Database (migrations applied to production):
 1. `supabase/migrations/20260805201601_squad_finder.sql` — Squad Finder core:
    tables, RPCs (`get_squad_matches`, `request_squad_session`,
    `respond_to_squad_session`, `get_no_ghost_score`), feedback trigger, RLS.
@@ -92,37 +94,51 @@ squad matchmaking, and tournaments.
      status must be `accepted`
    - `GRANT EXECUTE ... TO authenticated` for both
 
-### 5.2 Backend (server actions)
-`src/lib/actions/squadFinder.ts`:
+Backend (`src/lib/actions/squadFinder.ts`):
 - `cancelSquadSession(sessionId)` — Zod-validated, maps RPC errors to
   friendly codes (`NOT_FOUND`, `NOT_INITIATOR`, `ALREADY_RESPONDED`)
 - `completeSquadSession(sessionId)` — Zod-validated, maps RPC errors to
   friendly codes (`NOT_FOUND`, `NOT_PARTICIPANT`, `INVALID_STATUS`)
 - Both call `revalidatePath` on the affected routes
 
-### 5.3 Validation
-`src/lib/validation/squadFinder.ts`:
+Validation (`src/lib/validation/squadFinder.ts`):
 - `cancelSquadSessionSchema` — session_id must be a UUID
 - `completeSquadSessionSchema` — session_id must be a UUID
 - `requestSquadSessionSchema` — recipient_id UUID, game enum,
   `scheduled_at` ISO datetime optional/nullable
 
-### 5.4 Frontend
+Frontend:
 - **Cancel button** on outgoing requests
   (`src/app/squads/requests/SquadRequestsList.tsx`)
 - **Scheduled-time input** on the request form
   (`src/app/squads/SquadMatchCard.tsx`) — `datetime-local` → UTC ISO string
   before sending
 - **Complete button** on accepted sessions
-  (`src/app/squads/[id]/SquadSessionDetail.tsx`, lines 142–152)
-  → button is present and wired to `completeSquadSession`
+  (`src/app/squads/[id]/SquadSessionDetail.tsx`) — wired to
+  `completeSquadSession`
 - **NotificationBell squad channel** (`src/components/NotificationBell.tsx`)
   — pushes "New squad request for {game}" notifications via Realtime
 
-### 5.5 Supabase Types Regenerated
+### 5.2 Supabase types regenerated
 - `src/lib/supabase/types.ts` regenerated via the MCP server and confirmed
   written to disk. `request_squad_session` typed with
   `p_scheduled_at?: string` (optional), plus the new RPC signatures.
+
+### 5.3 Security hardening (migrations applied to production)
+1. `supabase/migrations/20260806020000_security_hardening_search_path_and_grants.sql`
+   - Fixed mutable `search_path` on 12 functions (set to `search_path = ''`),
+     eliminating all 12 `security_definer_view` advisor warnings.
+   - Audited 7 `SECURITY DEFINER` functions exposed to `PUBLIC`; revoked
+     `EXECUTE` from `PUBLIC` on the 6 that are only invoked internally
+     (kept `handle_new_user` since it is trigger-only and safe).
+2. `supabase/migrations/20260806030000_revoke_public_execute_security_definer.sql`
+   - Explicit `REVOKE EXECUTE ... FROM PUBLIC` for the 6 functions, with
+     `GRANT EXECUTE ... TO authenticated` where the app calls them directly.
+
+### 5.4 Next.js 16 proxy convention
+- Renamed `src/middleware.ts` → `src/proxy.ts` (Next 16 renamed the
+  middleware convention to `proxy.ts` / `proxy()` export). Build now shows
+  `ƒ Proxy (Middleware)` with no deprecation warning.
 
 ## 6. Verification Performed
 
@@ -131,7 +147,13 @@ squad matchmaking, and tournaments.
   - non-participant actions rejected
   - wrong-status transitions rejected
   - duplicate/cancelled/complete idempotency checked
-- **`get_advisors(security)`** — no new findings after the schema changes.
+- **`get_advisors(security)`** — after security hardening, the
+  `security_definer_view` warnings dropped 12 → 0.
+- **`npm run build`** — clean production build (Next.js 16.2.10 via Turbopack),
+  TypeScript passes, 20 static pages generated. 1 deprecation warning fixed
+  by the middleware → proxy rename.
+- **Git** — repository initialized in `gob/`; migration + proxy-rename changes
+  committed (`ab1b508`).
 - **API log review** (`get_logs` for the `api` service):
   - Request flow is healthy: `get_squad_matches` / `squad_preferences`
     returning 200; `request_squad_session` returns expected outcomes
@@ -141,23 +163,32 @@ squad matchmaking, and tournaments.
 
 ## 7. Known Issues / Blockers
 
-1. **Local tooling not installed** — `npx tsc` fails with "not the tsc
-   command" because `node_modules` is missing inside `gob/`.
-   → Run `npm install` in `gob/` before any type-check/build.
-2. **No git repository** — neither the root nor `gob/` is under version
-   control, so no commit history/diffing is available.
+1. **Leaked-password protection not enabled** — the auth setting
+   "Leaked password protection" requires a paid plan (Pro+); free plan keeps
+   the feature disabled. Not a code issue — a billing decision.
+2. **3 high-severity npm vulnerabilities** — `npm audit` reports 3
+   high-severity findings with **no safe fix available** (flags a "breaking"
+   or impossible direct update). Requires package upgrades + full regression
+   testing before being applied.
+3. **No git filter for `.env`** — `.gitignore` exists in `gob/`. Confirm
+   `.env.local` is ignored before any remote push.
 
 ## 8. Unfinished Work / Next Steps
 
-- [ ] `cd gob && npm install` — restore local tooling
-- [ ] `npx tsc --noEmit` — type-check the whole app
-- [ ] `npm run build` — production build sanity check
-- [ ] Run the `pre-completion-checklist` skill for the final audit
-- [ ] Manual QA at 320px and 375px widths + keyboard/ARIA pass on:
+- [ ] **Manual QA** at 320px and 375px widths + keyboard/ARIA pass on:
   - `/squads` (request form with scheduled-time input)
   - `/squads/requests` (cancel button)
   - `/squads/[id]` (complete button)
-- [ ] If the user re-reports the "server crash" on `/squads`: after
-  `npm install`, restart the dev server and reproduce; the code path itself
+- [ ] **Live-data test** of cancel + complete buttons end-to-end
+  (the RPCs are verified, but the buttons haven't been clicked through a
+  browser against the live DB).
+- [ ] **`/squads` crash repro** — if the user re-reports the "server crash":
+  restart the dev server and reproduce. The code path
   (client → server action → RPC → revalidate) is complete and correctly
   typed per inspection and API logs.
+- [ ] **npm audit remediation** — schedule upgrades for the 3 high-severity
+  findings once a safe upgrade path exists.
+- [ ] **Decide on leaked-password protection** — requires upgrading the
+  Supabase plan (Pro+) if desired.
+- [ ] Run the `pre-completion-checklist` skill for the final audit once the
+  manual QA passes.
