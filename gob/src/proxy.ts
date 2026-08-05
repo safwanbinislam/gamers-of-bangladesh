@@ -2,10 +2,14 @@ import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
 /**
- * Middleware that protects /api/trades, /api/disputes, and /api/admin routes.
+ * Proxy that protects /api/trades, /api/disputes, and /api/admin routes.
  * Checks for a valid Supabase session and returns 401 JSON if missing.
+ *
+ * Note: Next.js 16 renamed the middleware convention (`middleware.ts` /
+ * `middleware()` export) to `proxy.ts` / `proxy()` export. Renamed to keep
+ * the project on the current convention and silence the deprecation warning.
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   // Skip auth check for webhooks — they use signature verification instead
   if (request.nextUrl.pathname.startsWith("/api/webhooks")) {
     return NextResponse.next();
