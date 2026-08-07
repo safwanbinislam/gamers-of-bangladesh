@@ -1,0 +1,178 @@
+[
+  {
+    "table_name": "dispute_messages",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "dispute_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "sender_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "message", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "attachment_url", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "disputes",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "transaction_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "raised_by", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "reason", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'open'::dispute_status", "udt_name": "dispute_status"},
+      {"column_name": "admin_notes", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "resolved_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "escrow_transactions",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "listing_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "buyer_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "seller_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "amount_bdt", "data_type": "numeric", "is_nullable": "NO", "column_default": null, "udt_name": "numeric"},
+      {"column_name": "platform_fee_bdt", "data_type": "numeric", "is_nullable": "NO", "column_default": "0", "udt_name": "numeric"},
+      {"column_name": "payment_method", "data_type": "USER-DEFINED", "is_nullable": "YES", "column_default": null, "udt_name": "payment_method_type"},
+      {"column_name": "payment_reference_id", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'awaiting_payment'::escrow_status", "udt_name": "escrow_status"},
+      {"column_name": "funded_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "delivered_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "confirmed_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "released_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "auto_release_deadline", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"},
+      {"column_name": "updated_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "tournament_matches",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "tournament_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "round_number", "data_type": "integer", "is_nullable": "NO", "column_default": null, "udt_name": "int4"},
+      {"column_name": "match_number", "data_type": "integer", "is_nullable": "NO", "column_default": null, "udt_name": "int4"},
+      {"column_name": "player1_id", "data_type": "uuid", "is_nullable": "YES", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "player2_id", "data_type": "uuid", "is_nullable": "YES", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "winner_id", "data_type": "uuid", "is_nullable": "YES", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "is_bye", "data_type": "boolean", "is_nullable": "NO", "column_default": "false", "udt_name": "bool"},
+      {"column_name": "status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'pending'::tournament_match_status", "udt_name": "tournament_match_status"},
+      {"column_name": "reported_by", "data_type": "uuid", "is_nullable": "YES", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "reported_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"},
+      {"column_name": "updated_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "tournament_prize_payouts",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "tournament_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "player_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "placement", "data_type": "integer", "is_nullable": "NO", "column_default": null, "udt_name": "int4"},
+      {"column_name": "amount_bdt", "data_type": "numeric", "is_nullable": "NO", "column_default": null, "udt_name": "numeric"},
+      {"column_name": "payout_status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'pending'::payout_status", "udt_name": "payout_status"},
+      {"column_name": "paid_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "tournament_registrations",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "tournament_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "player_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "payment_method", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": null, "udt_name": "payment_method_type"},
+      {"column_name": "payment_reference_id", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "payment_status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'pending'::registration_payment_status", "udt_name": "registration_payment_status"},
+      {"column_name": "seed_position", "data_type": "integer", "is_nullable": "YES", "column_default": null, "udt_name": "int4"},
+      {"column_name": "registered_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "tournaments",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "organizer_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "game", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": null, "udt_name": "game_type"},
+      {"column_name": "title", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "rules", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "format", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'single_elimination'::tournament_format", "udt_name": "tournament_format"},
+      {"column_name": "entry_fee_bdt", "data_type": "numeric", "is_nullable": "NO", "column_default": "0", "udt_name": "numeric"},
+      {"column_name": "platform_fee_percent", "data_type": "numeric", "is_nullable": "NO", "column_default": "10", "udt_name": "numeric"},
+      {"column_name": "max_participants", "data_type": "integer", "is_nullable": "NO", "column_default": null, "udt_name": "int4"},
+      {"column_name": "prize_split", "data_type": "jsonb", "is_nullable": "NO", "column_default": "'{\"1st\": 100}'::jsonb", "udt_name": "jsonb"},
+      {"column_name": "status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'draft'::tournament_status", "udt_name": "tournament_status"},
+      {"column_name": "starts_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "registration_closes_at", "data_type": "timestamp with time zone", "is_nullable": "YES", "column_default": null, "udt_name": "timestamptz"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"},
+      {"column_name": "updated_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "transaction_status_history",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "transaction_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "old_status", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "new_status", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "changed_by", "data_type": "uuid", "is_nullable": "YES", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "note", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "listings",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "seller_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "game", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": null, "udt_name": "game_type"},
+      {"column_name": "item_type", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": null, "udt_name": "item_type"},
+      {"column_name": "title", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "description", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "price_bdt", "data_type": "numeric", "is_nullable": "NO", "column_default": null, "udt_name": "numeric"},
+      {"column_name": "screenshots", "data_type": "ARRAY", "is_nullable": "YES", "column_default": null, "udt_name": "_text"},
+      {"column_name": "status", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": "'active'::listing_status", "udt_name": "listing_status"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"},
+      {"column_name": "updated_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "player_game_stats",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "player_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "game", "data_type": "USER-DEFINED", "is_nullable": "NO", "column_default": null, "udt_name": "game_type"},
+      {"column_name": "in_game_name", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "rank_or_level", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "stats", "data_type": "jsonb", "is_nullable": "YES", "column_default": null, "udt_name": "jsonb"},
+      {"column_name": "is_verified", "data_type": "boolean", "is_nullable": "NO", "column_default": "false", "udt_name": "bool"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"},
+      {"column_name": "updated_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "reviews",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": "gen_random_uuid()", "udt_name": "uuid"},
+      {"column_name": "transaction_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "reviewer_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "reviewee_id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "rating", "data_type": "integer", "is_nullable": "NO", "column_default": null, "udt_name": "int4"},
+      {"column_name": "comment", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  },
+  {
+    "table_name": "profiles",
+    "columns": [
+      {"column_name": "id", "data_type": "uuid", "is_nullable": "NO", "column_default": null, "udt_name": "uuid"},
+      {"column_name": "username", "data_type": "text", "is_nullable": "NO", "column_default": null, "udt_name": "text"},
+      {"column_name": "avatar_url", "data_type": "text", "is_nullable": "YES", "column_default": null, "udt_name": "text"},
+      {"column_name": "phone_verified", "data_type": "boolean", "is_nullable": "NO", "column_default": "false", "udt_name": "bool"},
+      {"column_name": "reputation_score", "data_type": "numeric", "is_nullable": "NO", "column_default": "0", "udt_name": "numeric"},
+      {"column_name": "total_trades", "data_type": "integer", "is_nullable": "NO", "column_default": "0", "udt_name": "int4"},
+      {"column_name": "is_admin", "data_type": "boolean", "is_nullable": "NO", "column_default": "false", "udt_name": "bool"},
+      {"column_name": "created_at", "data_type": "timestamp with time zone", "is_nullable": "NO", "column_default": "now()", "udt_name": "timestamptz"}
+    ]
+  }
+]
