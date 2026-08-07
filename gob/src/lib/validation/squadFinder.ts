@@ -150,3 +150,27 @@ export const completeSquadSessionSchema = z.object({
 });
 
 export type CompleteSquadSessionInput = z.infer<typeof completeSquadSessionSchema>;
+
+/**
+ * Zod schema for sending a squad session chat message.
+ *
+ * - `session_id`: uuid of the session the message belongs to
+ * - `message`: at most 1000 characters, trimmed, and must be non-empty after
+ *   trimming. The DB enforces the 1000-char limit via a CHECK constraint and
+ *   the participant/status rules via the `validate_squad_session_message`
+ *   BEFORE INSERT trigger — here we only validate input shape and length.
+ *
+ * `sender_id` is intentionally NOT accepted from the client — it is always
+ * derived from the authenticated session in the server action.
+ */
+export const sendSquadSessionMessageSchema = z.object({
+  session_id: z.string().uuid("Session must be a valid ID"),
+  message: z
+    .string()
+    .max(1000, "Message must be at most 1000 characters")
+    .transform((value) => value.trim())
+    .refine((value) => value.length > 0, { message: "Message is required" }),
+});
+
+export type SendSquadSessionMessageInput = z.infer<typeof sendSquadSessionMessageSchema>;
+

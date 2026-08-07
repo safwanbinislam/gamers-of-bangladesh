@@ -553,6 +553,53 @@ export type Database = {
           },
         ]
       }
+      squad_session_messages: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          sender_id: string
+          session_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message: string
+          sender_id: string
+          session_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          sender_id?: string
+          session_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "squad_session_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "player_passport_view"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "squad_session_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "squad_session_messages_session_id_fkey"
+            columns: ["session_id"]
+            isOneToOne: false
+            referencedRelation: "squad_sessions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+
       squad_sessions: {
         Row: {
           created_at: string

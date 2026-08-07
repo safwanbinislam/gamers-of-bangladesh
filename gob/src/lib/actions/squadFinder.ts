@@ -6,6 +6,7 @@ import {
   requestSquadSessionSchema,
   cancelSquadSessionSchema,
   completeSquadSessionSchema,
+  sendSquadSessionMessageSchema,
 } from "@/lib/validation/squadFinder";
 import { revalidatePath } from "next/cache";
 
@@ -71,6 +72,23 @@ export type GetNoGhostScoreResult =
 
 export type SubmitSquadFeedbackResult =
   | { success: true; data: { id: string } }
+  | { success: false; code: string; message: string };
+
+export type SendSquadSessionMessageResult =
+  | { success: true; data: { id: string } }
+  | { success: false; code: string; message: string; fieldErrors?: Record<string, string[]> };
+
+export type SquadSessionMessage = {
+  id: string;
+  session_id: string;
+  sender_id: string;
+  message: string;
+  created_at: string;
+  sender: { id: string; username: string; avatar_url: string | null } | null;
+};
+
+export type GetSquadSessionMessagesResult =
+  | { success: true; data: SquadSessionMessage[] }
   | { success: false; code: string; message: string };
 
 // ---------------------------------------------------------------------------
@@ -578,6 +596,149 @@ export async function submitSquadFeedback(input: {
       return { success: false, code: "AUTH_REQUIRED", message: "Authentication required." };
     }
     console.error("Unexpected error submitting squad feedback:", err);
+    return { success: false, code: "ERROR", message: "An unexpected error occurred." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// sendSquadSessionMessage
+// ---------------------------------------------------------------------------
+
+/**
+ * Server Action: Send a message in a squad session chat.
+ *
+ * The `sender_id` is ALWAYS derived from the authenticated session — never
+ * trusted from the client. Order-of-insert eligibility (real participant +
+ * session already 'accepted'/'completed') is enforced by the
+ * `validate_squad_session_message` BEFORE INSERT trigger in the DB; here we
+ * translate its exceptions into the standard error shape so raw Postgres
+ * errors never reach the client. RLS additionally restricts writes to the
+ * session's participants (or an admin).
+ */
+export async function sendSquadSessionMessage(input: {
+  session_id: string;
+  message: string;
+}): Promise<SendSquadSessionMessageResult> {
+  try {
+    const userId = await requireAuthUserId();
+    const supabase = await createServerSupabaseClient();
+
+    // === VALIDATION ===
+    const validationResult = sendSquadSessionMessageSchema.safeParse(input);
+    if (!validationResult.success) {
+      return {
+        success: false,
+        code: "VALIDATION_ERROR",
+        message: "Please fix the errors below",
+        fieldErrors: validationResult.error.flatten().fieldErrors,
+      };
+    }
+
+    const validated = validationResult.data;
+
+    const { data, error } = await supabase
+      .from("squad_session_messages")
+      .insert({
+        session_id: validated.session_id,
+        sender_id: userId,
+        message: validated.message,
+      })
+      .select("id")
+      .single();
+
+    if (error) {
+      const msg = error.message ?? "";
+      if (msg.includes("does not exist")) {
+        return { success: false, code: "NOT_FOUND", message: "This squad session no longer exists." };
+      }
+      if (msg.includes("Only a participant")) {
+        return { success: false, code: "NOT_PARTICIPANT", message: "You are not a participant of this squad session." };
+      }
+      if (msg.includes("Messages can only be sent by the authenticated user")) {
+        return { success: false, code: "FORBIDDEN", message: "You cannot send a message on behalf of another user." };
+      }
+      if (msg.includes("Chat is only available once a session is accepted")) {
+        return { success: false, code: "INVALID_STATUS", message: "Chat is only available after a squad request is accepted." };
+      }
+      console.error("Error sending squad session message:", error);
+      return { success: false, code: "ERROR", message: "Failed to send message." };
+    }
+
+    revalidatePath(`/squads/${validated.session_id}`);
+    return { success: true, data: { id: data.id } };
+  } catch (err) {
+    if (err instanceof Error && err.message === "AUTH_REQUIRED") {
+      return { success: false, code: "AUTH_REQUIRED", message: "Authentication required." };
+    }
+    console.error("Unexpected error sending squad session message:", err);
+    return { success: false, code: "ERROR", message: "An unexpected error occurred." };
+  }
+}
+
+// ---------------------------------------------------------------------------
+// getSquadSessionMessages
+// ---------------------------------------------------------------------------
+
+/**
+ * Server Action: Fetch the message history for a squad session, oldest first.
+ *
+ * RLS on `squad_session_messages` restricts reads to the session's
+ * participants (or an admin) via an EXISTS-join to the parent session, so a
+ * non-participant's query returns no rows. To give callers a clear signal (and
+ * as defense-in-depth over RLS), we first confirm the caller is a participant
+ * (or admin) of the session before returning any messages.
+ */
+export async function getSquadSessionMessages(
+  sessionId: string
+): Promise<GetSquadSessionMessagesResult> {
+  try {
+    const userId = await requireAuthUserId();
+    const supabase = await createServerSupabaseClient();
+
+    // Defense-in-depth participant check over RLS.
+    const { data: session, error: sessionError } = await supabase
+      .from("squad_sessions")
+      .select("id, initiator_id, recipient_id")
+      .eq("id", sessionId)
+      .maybeSingle();
+
+    if (sessionError) {
+      console.error("Error loading squad session for chat:", sessionError);
+      return { success: false, code: "ERROR", message: "Failed to load messages." };
+    }
+    if (!session) {
+      return { success: false, code: "NOT_FOUND", message: "Squad session not found." };
+    }
+
+    const { data: isAdminRow } = await supabase.rpc("is_admin");
+    const isAdmin = isAdminRow === true;
+
+    if (!isAdmin && session.initiator_id !== userId && session.recipient_id !== userId) {
+      return { success: false, code: "FORBIDDEN", message: "You are not a participant of this squad session." };
+    }
+
+    const { data: messages, error } = await supabase
+      .from("squad_session_messages")
+      .select(
+        `*,
+         sender:profiles!squad_session_messages_sender_id_fkey (
+           id, username, avatar_url
+         )`
+      )
+      .eq("session_id", sessionId)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      console.error("Error fetching squad session messages:", error);
+      return { success: false, code: "ERROR", message: "Failed to load messages." };
+    }
+
+    return { success: true, data: (messages ?? []) as unknown as SquadSessionMessage[] };
+  } catch (err) {
+    if (err instanceof Error && err.message === "AUTH_REQUIRED") {
+      return { success: false, code: "AUTH_REQUIRED", message: "Authentication required." };
+    }
+    console.error("Unexpected error fetching squad session messages:", err);
     return { success: false, code: "ERROR", message: "An unexpected error occurred." };
   }
 }
