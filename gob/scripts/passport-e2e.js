@@ -1,8 +1,10 @@
 import { spawn } from "node:child_process";
 import { createClient } from "@supabase/supabase-js";
 
+import { getServiceRoleKey } from "./lib/service-role.js";
+
 const URL = "https://dearprguaymmvgqqqbjf.supabase.co";
-const SERVICE_ROLE = "sb_secret_pk8cU8CkfsEux0w8RI0p8Q_7F0xiuYN";
+const SERVICE_ROLE = getServiceRoleKey();
 const BASE = "http://localhost:3000";
 const OWNER_ID = "5ad8859e-7eae-4374-9bf3-99cbb689126b";
 const VIEWER_ID = "83427d80-8443-416d-89d3-fa4ca350b8fd";

@@ -1,0 +1,25 @@
+-- ============================================================================
+-- advance_winner_to_next_round: make it internal-only
+-- ============================================================================
+-- WHY: after removing the redundant app-level call in
+-- src/lib/tournaments/reportMatchResult.ts (the live report_match_result RPC
+-- already advances the winner inside its own transaction), no application code
+-- calls advance_winner_to_next_round with the authenticated role anymore. It is
+-- only invoked internally — by generate_bracket (bye auto-advance) and by
+-- report_match_result — and those calls run under SECURITY DEFINER as the
+-- function owner (postgres), so they do not need an EXECUTE grant.
+--
+-- Revoking `authenticated` EXECUTE:
+--   * removes the advisor warning
+--     (authenticated_security_definer_function_executable), and
+--   * closes the exposure: this function has NO internal authorization checks
+--     (no auth.uid()/organizer validation), so it must not be directly
+--     callable by signed-in users via /rest/v1/rpc/... — doing so would let
+--     anyone inject a winner into any tournament bracket.
+--
+-- service_role EXECUTE is intentionally retained (consistent with the app's
+-- service-role admin client for manual/support interventions).
+-- Idempotent (REVOKE of a non-existent grant is a no-op).
+-- ============================================================================
+
+REVOKE EXECUTE ON FUNCTION public.advance_winner_to_next_round(uuid, integer, integer, uuid) FROM authenticated;

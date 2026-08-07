@@ -9,36 +9,33 @@ export type ReportMatchResultOutcome =
   | { success: false; code: string; message: string };
 
 /**
- * Reports a match result and advances the winner to the next round.
+ * Reports a match result. The `report_match_result` RPC is atomic on the
+ * database side: it validates the caller (organizer or admin), records the
+ * winner, AND advances the winner into the next round (or marks the
+ * tournament 'completed' for the final round) inside one function/transaction.
+ * Application code therefore makes a single `.rpc()` call — there is NO
+ * separate `advance_winner_to_next_round` call here, and one must not be
+ * added: that function carries no authorization checks of its own, and its
+ * `authenticated` EXECUTE grant is revoked (20260807020100) so it is
+ * internal-only.
  *
- * SEQUENCING: `report_match_result` and `advance_winner_to_next_round` are
- * two SEPARATE Postgres functions — each `.rpc()` call here is its own
- * round-trip, not wrapped together in one database transaction from this
- * application's perspective. A failure between the two calls can therefore
- * leave a match 'reported' with a recorded winner, but that winner not yet
- * placed into the next round's match slot. We handle this explicitly:
+ * Steps performed here (defense in depth, independent of RLS):
  *
- *   1. Verify the caller is one of the two players in the match, or an
- *      admin (checked here, independent of RLS).
+ *   1. Verify the caller is the tournament organizer or an admin (checked
+ *      here, independent of RLS) — participants cannot self-report; this
+ *      matches the RPC's own internal rule and the UI (BracketView only
+ *      renders the report control for organizer/admin).
  *   2. Validate winner_id is actually one of the two players.
- *   3. Call report_match_result(match_id, winner_id).
- *   4. Call advance_winner_to_next_round(...).
- *   5. If step 4 fails, we do NOT attempt to roll back step 3 — there is
- *      no "un-report" operation, and the recorded result itself is still a
- *      valid, real outcome that should not be discarded just because the
- *      bracket-advancement step failed. Instead we return a distinct
- *      ADVANCEMENT_FAILED error so the caller/UI can surface "the result
- *      was recorded, but the bracket could not be advanced automatically;
- *      please retry" rather than silently losing the recorded result.
+ *   3. Call report_match_result(match_id, winner_id) — this single RPC
+ *      records the result and advances/completes in one DB transaction.
  *
  * IDEMPOTENCY / RETRY: if this function is called again for a match that
  * is already 'reported' with the SAME winner_id, step 3 is skipped as a
- * no-op and we proceed straight to (re-)attempting step 4 — this makes it
- * safe for a client to retry after an ADVANCEMENT_FAILED response without
- * double-reporting. If the match is already 'reported' with a DIFFERENT
- * winner_id, that is a genuine conflict and is rejected — resolving a
- * disputed result is handled via the existing disputes flow, not this
- * function.
+ * no-op — this makes it safe for a client to retry after a transient
+ * failure without double-reporting. If the match is already 'reported' with
+ * a DIFFERENT winner_id, that is a genuine conflict and is rejected —
+ * resolving a disputed result is handled via the existing disputes flow,
+ * not this function.
  */
 export async function reportMatchResult(
   supabase: TypedSupabaseClient,
@@ -56,18 +53,31 @@ export async function reportMatchResult(
     return { success: false, code: "NOT_FOUND", message: "Match not found" };
   }
 
-  const isParticipant = match.player1_id === callerId || match.player2_id === callerId;
+  // Fetch the tournament to enforce the organizer/admin gate. Participants
+  // cannot self-report — this matches the RPC's own internal rule and the UI
+  // (BracketView only shows the report control to organizer/admin).
+  const { data: tournament, error: tournamentError } = await supabase
+    .from("tournaments")
+    .select("organizer_id")
+    .eq("id", match.tournament_id)
+    .single();
+
+  if (tournamentError || !tournament) {
+    return { success: false, code: "NOT_FOUND", message: "Tournament not found" };
+  }
+
+  const isOrganizer = tournament.organizer_id === callerId;
   let isAdmin = false;
-  if (!isParticipant) {
+  if (!isOrganizer) {
     const { data: adminCheck } = await supabase.rpc("is_admin");
     isAdmin = adminCheck === true;
   }
 
-  if (!isParticipant && !isAdmin) {
+  if (!isOrganizer && !isAdmin) {
     return {
       success: false,
       code: "FORBIDDEN",
-      message: "Only the two players in this match or an admin can report its result",
+      message: "Only the tournament organizer or an admin can report a match result",
     };
   }
 
@@ -113,28 +123,6 @@ export async function reportMatchResult(
       success: false,
       code: "DATABASE_ERROR",
       message: "Result reported but the match could not be refetched",
-    };
-  }
-
-  // Advance the winner into the next round. If this match's round is the
-  // final round, there is no next round to advance into — that "is this
-  // the final?" determination correctly belongs to the RPC/schema, not
-  // this application code, so we call it unconditionally and rely on the
-  // RPC to no-op gracefully for a final-round match.
-  const { error: advanceError } = await supabase.rpc("advance_winner_to_next_round", {
-    p_tournament_id: reportedMatch.tournament_id,
-    p_round_number: reportedMatch.round_number,
-    p_match_number: reportedMatch.match_number,
-    p_winner_id: winnerId,
-  });
-
-  if (advanceError) {
-    console.error("Error advancing winner to next round:", advanceError);
-    return {
-      success: false,
-      code: "ADVANCEMENT_FAILED",
-      message:
-        "The match result was recorded, but the bracket could not be advanced automatically. Please retry this request.",
     };
   }
 

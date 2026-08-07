@@ -1,7 +1,9 @@
 import { createClient } from "@supabase/supabase-js";
 
+import { getServiceRoleKey } from "./lib/service-role.js";
+
 const URL = "https://dearprguaymmvgqqqbjf.supabase.co";
-const SERVICE_ROLE = "sb_secret_pk8cU8CkfsEux0w8RI0p8Q_7F0xiuYN";
+const SERVICE_ROLE = getServiceRoleKey();
 
 const supabase = createClient(URL, SERVICE_ROLE, {
   auth: { autoRefreshToken: false, persistSession: false },

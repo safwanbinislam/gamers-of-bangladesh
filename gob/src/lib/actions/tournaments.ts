@@ -266,11 +266,12 @@ export async function closeRegistration(tournamentId: string): Promise<CloseRegi
 /**
  * Server Action: Report a match result.
  * Delegates to shared reportMatchResult() which handles:
- *   - Participant/admin authorization check
+ *   - Organizer/admin authorization check
  *   - winner_id validation (must be one of the two players)
  *   - Idempotency (same winner re-report is a no-op)
  *   - Conflicting report detection
- *   - report_match_result RPC + advance_winner_to_next_round RPC sequencing
+ *   - report_match_result RPC (records the result AND advances the winner /
+ *     completes the tournament atomically inside the database)
  * Uses Supabase client directly so auth cookies are preserved.
  */
 export async function reportMatchResult(
