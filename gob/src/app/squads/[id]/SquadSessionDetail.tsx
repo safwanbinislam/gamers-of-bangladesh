@@ -3,8 +3,10 @@
 import { useState } from "react";
 import Link from "next/link";
 import { respondToSquadSession, submitSquadFeedback, completeSquadSession } from "@/lib/actions/squadFinder";
+import type { SquadSessionMessage } from "@/lib/actions/squadFinder";
 import { showToast } from "@/components/Toast";
 import { getGameLabel, getSquadStatusLabel, getSquadStatusColor } from "@/lib/utils";
+import { SquadSessionChat } from "@/components/SquadSessionChat";
 
 interface SquadSessionDetailProps {
   session: {
@@ -20,9 +22,10 @@ interface SquadSessionDetailProps {
   };
   currentUserId: string;
   myFeedback: { id: string; showed_up: boolean; note: string | null } | null;
+  initialMessages: SquadSessionMessage[];
 }
 
-export function SquadSessionDetail({ session, currentUserId, myFeedback }: SquadSessionDetailProps) {
+export function SquadSessionDetail({ session, currentUserId, myFeedback, initialMessages }: SquadSessionDetailProps) {
   const [status, setStatus] = useState(session.status);
   const [isResponding, setIsResponding] = useState(false);
   const [isCompleting, setIsCompleting] = useState(false);
@@ -151,6 +154,13 @@ export function SquadSessionDetail({ session, currentUserId, myFeedback }: Squad
           </div>
         )}
       </div>
+
+      <SquadSessionChat
+        sessionId={session.id}
+        status={status}
+        initialMessages={initialMessages}
+        currentUserId={currentUserId}
+      />
 
       {isFeedbackEligible && (
         <div className="bg-dark-surface border border-dark-border rounded-xl p-5 space-y-4">

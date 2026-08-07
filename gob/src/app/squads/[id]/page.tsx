@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { createServerSupabaseClient, requireAuthUserId } from "@/lib/supabase/server";
 import { SquadSessionDetail } from "./SquadSessionDetail";
+import { getSquadSessionMessages } from "@/lib/actions/squadFinder";
 
 export default async function SquadSessionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -33,6 +34,11 @@ export default async function SquadSessionDetailPage({ params }: { params: Promi
     .eq("reporter_id", userId)
     .maybeSingle();
 
+  // Fetch the existing chat history (participant-only read). A non-participant
+  // would already have been redirected above; this also re-runs the check.
+  const messagesResult = await getSquadSessionMessages(id);
+  const initialMessages = messagesResult.success ? messagesResult.data : [];
+
   return (
     <div className="max-w-3xl mx-auto px-4 py-6 space-y-6">
       <Link href="/squads/requests" className="inline-flex items-center text-sm text-text-secondary hover:text-text-primary">
@@ -46,6 +52,7 @@ export default async function SquadSessionDetailPage({ params }: { params: Promi
         session={session as unknown as Parameters<typeof SquadSessionDetail>[0]["session"]}
         currentUserId={userId}
         myFeedback={myFeedback ?? null}
+        initialMessages={initialMessages}
       />
     </div>
   );
