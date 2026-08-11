@@ -108,3 +108,125 @@ input:-webkit-autofill:focus {
 .status-disputed { background: #450a0a; color: #fca5a5; }
 .status-refunded { background: #431407; color: #fdba74; }
 .status-cancelled { background: #1f2937; color: #6b7280; }
+
+/* ══════════════════════════════════════════════════════════════
+   Homepage — scroll reveal + ambient animation system
+   Strategy: an IntersectionObserver toggles GPU-friendly classes
+   (transform / opacity only — never layout properties). Elements are
+   fully visible by default; the hidden init state is applied by JS only,
+   so SSR / no-JS / reduced-motion users always see content.
+   Shared easing: 700ms cubic-bezier(0.22, 1, 0.36, 1). No animation lib.
+   ══════════════════════════════════════════════════════════════ */
+
+/* Reveal start state — hidden; transition disabled so the "hide" step is instant */
+.rv-init,
+.rv-in {
+  will-change: opacity, transform;
+}
+.rv-init {
+  opacity: 0;
+  transition: none;
+  transform: translateY(28px);
+}
+.rv-init.rv-down { transform: translateY(-28px); }
+.rv-init.rv-left { transform: translateX(-28px); }
+.rv-init.rv-right { transform: translateX(28px); }
+.rv-init.rv-scale { transform: scale(0.96); }
+.rv-init.rv-fade { transform: none; }
+
+/* Reveal end state — visible, with the shared calm easing */
+.rv-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    transform 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Scroll progress indicator — 3px gradient bar at the very top */
+.scroll-progress {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  z-index: 50;
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  background: linear-gradient(90deg, #7c3aed, #22d3ee);
+  pointer-events: none;
+}
+
+/* Ambient hero glow — slow breathing opacity (GPU friendly) */
+@keyframes gob-glow-pulse {
+  from { opacity: 0.06; }
+  to { opacity: 0.13; }
+}
+.anim-glow-pulse {
+  animation: gob-glow-pulse 12s ease-in-out infinite alternate;
+}
+
+/* Ambient float — subtle drift for decorative blobs */
+@keyframes gob-float {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(0, -14px, 0) scale(1.04); }
+}
+.anim-float { animation: gob-float 14s ease-in-out infinite alternate; }
+.anim-float-slow { animation: gob-float 20s ease-in-out infinite alternate; }
+
+/* Ambient particle dots (decorative, non-interactive) */
+.ambient-dots {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+.ambient-dots span {
+  position: absolute;
+  display: block;
+  border-radius: 9999px;
+  background: #7c3aed;
+  animation: gob-drift 18s ease-in-out infinite alternate;
+}
+.ambient-dots span:nth-child(3n + 1) { background: #22d3ee; }
+.ambient-dots span:nth-child(3n + 2) { background: #8b5cf6; }
+@keyframes gob-drift {
+  from { transform: translate3d(0, 0, 0); opacity: 0.15; }
+  50% { opacity: 0.4; }
+  to { transform: translate3d(0, -38px, 0); opacity: 0.2; }
+}
+
+/* Mobile: shorter travel + fewer ambient particles */
+@media (max-width: 640px) {
+  .rv-init { transform: translateY(18px); }
+  .rv-init.rv-down { transform: translateY(-18px); }
+  .rv-init.rv-left { transform: translateX(-18px); }
+  .rv-init.rv-right { transform: translateX(18px); }
+  .ambient-dots span:nth-child(n + 7) { display: none; }
+}
+
+/* Respect reduced motion — no entrance animations, no ambient movement */
+@media (prefers-reduced-motion: reduce) {
+  .rv-init,
+  .rv-in {
+    opacity: 1 !important;
+    transform: none !important;
+    transition: none !important;
+  }
+  .anim-float,
+  .anim-float-slow,
+  .anim-glow-pulse,
+  .ambient-dots span {
+    animation: none !important;
+  }
+  .scroll-progress {
+    display: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

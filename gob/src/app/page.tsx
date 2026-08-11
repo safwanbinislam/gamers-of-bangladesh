@@ -1,26 +1,37 @@
 import Link from "next/link";
+import { AmbientDots } from "@/components/animations/AmbientDots";
+import { Reveal } from "@/components/animations/Reveal";
+import { ScrollProgress } from "@/components/animations/ScrollProgress";
+import { StaggerGroup } from "@/components/animations/StaggerGroup";
 
 export default function HomePage() {
   return (
     <div className="flex flex-col">
+      <ScrollProgress />
       {/* ===== HERO SECTION ===== */}
       <section className="relative overflow-hidden">
         <div className="absolute inset-0 bg-gradient-to-br from-dark-surface-2 via-dark-bg to-dark-bg" />
-        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-3xl" />
-        <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-3xl" />
+        <div className="absolute top-[-10%] right-[-10%] w-[40%] h-[40%] rounded-full bg-primary/10 blur-3xl anim-glow-pulse" />
+        <div className="absolute bottom-[-10%] left-[-10%] w-[30%] h-[30%] rounded-full bg-secondary/5 blur-3xl anim-float-slow" />
+        <AmbientDots />
 
         <div className="relative max-w-5xl mx-auto px-4 py-20 sm:py-28 lg:py-36">
           <div className="max-w-2xl space-y-6">
-            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-text-primary leading-[1.1] font-display">
-              The Complete Platform for{" "}
-              <span className="text-primary">Bangladeshi Gamers</span>
-            </h1>
-            <p className="text-base sm:text-lg text-text-secondary leading-relaxed max-w-xl">
-              Trade game items safely with escrow, compete in tournaments,
-              build your reputation, and find the perfect squad — all in one
-              place, built for the Bangladeshi gaming community.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+            <Reveal>
+              <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight text-text-primary leading-[1.1] font-display">
+                The Complete Platform for{" "}
+                <span className="text-primary">Bangladeshi Gamers</span>
+              </h1>
+            </Reveal>
+            <Reveal delay={120}>
+              <p className="text-base sm:text-lg text-text-secondary leading-relaxed max-w-xl">
+                Trade game items safely with escrow, compete in tournaments,
+                build your reputation, and find the perfect squad — all in one
+                place, built for the Bangladeshi gaming community.
+              </p>
+            </Reveal>
+            <Reveal delay={260}>
+              <div className="flex flex-col sm:flex-row gap-3 pt-2">
               <Link
                 href="/marketplace"
                 className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 text-base"
@@ -40,6 +51,7 @@ export default function HomePage() {
                 Join a Tournament
               </Link>
             </div>
+            </Reveal>
           </div>
         </div>
       </section>
@@ -47,15 +59,19 @@ export default function HomePage() {
       {/* ===== WHAT WE OFFER (4 FEATURES) ===== */}
       <section className="border-t border-dark-border bg-dark-surface">
         <div className="max-w-5xl mx-auto px-4 py-16 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary text-center mb-3 font-display">
-            What We Offer
-          </h2>
-          <p className="text-text-secondary text-center text-base mb-12 max-w-2xl mx-auto">
-            Four powerful features that cover everything a Bangladeshi gamer
-            needs — from safe trading to finding your next squad.
-          </p>
+          <Reveal>
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary text-center mb-3 font-display">
+              What We Offer
+            </h2>
+          </Reveal>
+          <Reveal delay={120}>
+            <p className="text-text-secondary text-center text-base mb-12 max-w-2xl mx-auto">
+              Four powerful features that cover everything a Bangladeshi gamer
+              needs — from safe trading to finding your next squad.
+            </p>
+          </Reveal>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
+          <StaggerGroup className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
             <FeatureCard
               href="/marketplace"
               icon={
@@ -99,14 +115,14 @@ export default function HomePage() {
               description="Set your preferences and get matched with compatible, active players. No more solo queue — find your perfect squad in seconds."
               cta="Find a Squad"
             />
-          </div>
+          </StaggerGroup>
         </div>
       </section>
 
       {/* ===== TRUST SIGNALS ===== */}
       <section className="border-t border-dark-border bg-dark-bg">
         <div className="max-w-5xl mx-auto px-4 py-16 sm:py-20">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+          <StaggerGroup gap={80} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
             <TrustCard
               icon={
                 <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -143,18 +159,20 @@ export default function HomePage() {
               title="Dispute Protection"
               description="If something goes wrong, open a dispute and an admin mediator will help resolve the issue fairly."
             />
-          </div>
+          </StaggerGroup>
         </div>
       </section>
 
       {/* ===== HOW IT WORKS ===== */}
       <section className="border-t border-dark-border bg-dark-surface">
         <div className="max-w-5xl mx-auto px-4 py-16 sm:py-20">
-          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary text-center mb-12 font-display">
-            How It Works
-          </h2>
+          <Reveal>
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary text-center mb-12 font-display">
+              How It Works
+            </h2>
+          </Reveal>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+          <StaggerGroup gap={80} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
             <StepCard
               stepNumber={1}
               title="List Your Item"
@@ -175,21 +193,26 @@ export default function HomePage() {
               title="Funds Released"
               description="The buyer confirms receipt. Funds are released to the seller. Done — safe and fair for both sides."
             />
-          </div>
+          </StaggerGroup>
         </div>
       </section>
 
       {/* ===== CTA BANNER ===== */}
       <section className="border-t border-dark-border bg-dark-bg">
         <div className="max-w-3xl mx-auto px-4 py-16 sm:py-20 text-center space-y-4">
-          <h2 className="text-2xl sm:text-3xl font-bold text-text-primary font-display">
-            Ready to level up your gaming?
-          </h2>
-          <p className="text-text-secondary text-base sm:text-lg">
-            Join the Bangladeshi gaming community already using GOB to trade,
-            compete, and squad up — all in one trusted platform.
-          </p>
-          <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
+          <Reveal variant="fade">
+            <h2 className="text-2xl sm:text-3xl font-bold text-text-primary font-display">
+              Ready to level up your gaming?
+            </h2>
+          </Reveal>
+          <Reveal variant="fade" delay={120}>
+            <p className="text-text-secondary text-base sm:text-lg">
+              Join the Bangladeshi gaming community already using GOB to trade,
+              compete, and squad up — all in one trusted platform.
+            </p>
+          </Reveal>
+          <Reveal variant="fade" delay={240}>
+            <div className="pt-2 flex flex-col sm:flex-row gap-3 justify-center">
             <Link
               href="/marketplace"
               className="btn-primary inline-flex items-center justify-center gap-2 px-6 py-3 text-base"
@@ -206,6 +229,7 @@ export default function HomePage() {
               Find a Squad
             </Link>
           </div>
+          </Reveal>
         </div>
       </section>
 
@@ -272,7 +296,7 @@ function FeatureCard({
   );
 
   const className =
-    "group bg-dark-surface-2 border border-dark-border rounded-xl p-6 space-y-4 hover:border-primary/40 hover:shadow-lg hover:shadow-primary/5 transition-all";
+    "group bg-dark-surface-2 border border-dark-border rounded-xl p-6 space-y-4 hover:-translate-y-1 hover:scale-[1.02] hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10 transition-all duration-300";
 
   if (href) {
     return (
@@ -295,7 +319,7 @@ function TrustCard({
   description: string;
 }) {
   return (
-    <div className="bg-dark-surface-2 border border-dark-border rounded-xl p-5 space-y-3">
+    <div className="bg-dark-surface-2 border border-dark-border rounded-xl p-5 space-y-3 transition-colors hover:border-primary/30 hover:shadow-lg hover:shadow-primary/5">
       <div className="w-10 h-10 rounded-lg bg-primary-subtle text-primary-light flex items-center justify-center">
         {icon}
       </div>
